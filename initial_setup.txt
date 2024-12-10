@@ -1,0 +1,73 @@
+#Create EC2 instance from AWS
+choose amazon linux
+name: kafka_stock_market
+create key pair name: kafka-stock-market-keypair
+create a folder and put the downloaded keypair into it
+
+#Connect to instance
+get the ssh client from that instance
+from terminal go to the file that you saved keypair file and paste ssh command and enter to connect to the instance
+
+#Download apache kafka into EC2
+onto the terminal paste: wget https://downloads.apache.org/kafka/3.6.2/kafka_2.12-3.6.2.tgz
+
+then uncompress it: tar -xvf kafka_2.12-3.6.2.tgz
+install java: sudo yum install java-1.8.0-openjdk
+
+#Enable access to EC2
+change directory: cd kafka_2.12-3.6.2
+paste this command: sudo nano config/server.properties
+change ADVERTISED_LISTENERS to public ip of the EC2 instance (advertised.listeners=PLAINTEXT://{my_ec2_ipv4_publicaddress}:9092)
+
+#Allow inbound rules on EC2
+go to security tab on ec2
+go to inbound and create
+allow all traffic and source as anywhereIPv4 and save
+
+#Starting zookeeper
+change directory to the kafka file: cd kafka_2.12-3.6.2
+start zookeper: bin/zookeeper-server-start.sh config/zookeeper.properties
+
+#Open new terminal to start kafka
+connect to ec2 using same ssh
+enter this to terminal to allow memory: export KAFKA_HEAP_OPTS="-Xmx512M -Xms512M"
+cd kafka_2.12-3.6.2
+bin/kafka-server-start.sh config/server.properties
+
+#Make the third terminal window
+connect to ec2 using ssh
+cd kafka_2.12-3.6.2
+create topic: bin/kafka-topics.sh --create --topic stock_market --bootstrap-server (Put the Public IP of your EC2 Instance):9092 --replication-factor 1 --partitions 1
+on same window: bin/kafka-console-producer.sh --topic stock_market --bootstrap-server Put the Public IP of your EC2 Instance:9092
+
+#Make the fourth window
+connect to ec2 using ssh
+cd kafka_2.12-3.6.2
+bin/kafka-console-consumer.sh --topic stock_market --bootstrap-server Put the Public IP of your EC2 Instance:9092
+
+#Try the notebook command to see if it works
+
+#Create s3 bucket
+create bucket: stock-market-miqs
+on the notebook install s3fs: pip install s3fs
+go to IAM: get aws access key, and aws secret access key
+other alternatives: create user and give administrator access to the user 
+put the bucket name at the KafkaConsumer.ipynb: "s3://stock-market-miqs/stock_market_{}.json (where stock-market-miqs is bucket name)
+
+#Install aws cli
+installed 64-bit aws cli
+go to cmd and paste: aws configure
+enter aws access key, and secret access key, region
+
+#Run KafkaProducer and KafkaConsumer notebook
+
+#Create aws glue crawler
+give name: stock_market_kakfka_iman
+click next and add data source
+choose s3 bucket that we created (put / at the end of bucket) click next
+choose IAM role (if not exist create new role and add glue as service name)
+give administratoraccess to the role
+add database for glue and name: stock_market_db
+
+#Use Athena
+the database should appear on the athena page.
